@@ -3,7 +3,7 @@ import requests
 import os
 
 # Init openrouter API
-API_KEY = os.environ.get("OPENROUTER_API_KEY")
+API_KEY = os.environ.get("OPENROUTER_API_KEY") or st.secrets.get("OPENROUTER_API_KEY")
 url = "https://openrouter.ai/api/v1/chat/completions"
 
 # openrouter model setup
