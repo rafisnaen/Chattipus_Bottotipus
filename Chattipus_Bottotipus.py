@@ -1,8 +1,34 @@
 import streamlit as st
-import google.generativeai as genai
-import openai
-import time
+import requests
 import os
+
+# Init openrouter API
+API_KEY = os.environ.get(["OPENROUTER_API_KEY"])
+url = "https://openrouter.ai/api/v1/chat/completions"
+
+# openrouter model setup
+
+def openrouter(model, messages, temperature, top_p, top_k, max_tokens):
+    headers = {
+        "Authorization": f"Bearer {API_KEY}",
+        "Content-Type": "application/json"
+    }
+
+    data = {
+        "model": model, 
+        "messages": messages, 
+        "temperature": temperature, 
+        "top_p": top_p, 
+        "top_k": top_k, 
+        "max_tokens": max_tokens,
+    }
+    response = requests.post(url, headers=headers, json=data)
+
+    #Raise HTTP error kalau selain kode 200 (kode 200 == berhasil)
+    if response.status_code != 200:
+        response.raise_for_status()
+    else:
+        return response.json()["choices"][0]["message"]["content"] 
 
 st.set_page_config(
     page_title="Anomali baru",
@@ -12,104 +38,64 @@ st.set_page_config(
 st.title("🐮 Chattipus Bottotipus")
 st.caption("Sosok anomali mengerikan")
 
-#Visualizing live-like reply ux
-def print_char(response):
-    for i in response.text:
-        yield i
-        time.sleep(0.030)
-
+#Make sidebar container
 with st.sidebar:
+     st.header("🐮 Pengaturan anomali")
+    
+    #selectbox widget
+     selected_model = st.selectbox(
+          "Pilih anomali",
+          ("google/gemini-2.0-flash-exp:free", "openai/gpt-oss-20b:free")
+     )
 
-    selected_model = st.selectbox(
-        "Pilih anomali",
-        ("gemini-2.5-flash", "gpt-3.5-turbo"),
-        key="selected_model"
-    )
-    st.write(f"🐮 Anomali {selected_model} Chatbot")
+    #caption
+     if selected_model == "google/gemini-2.0-flash-exp:free":
+        st.caption("🐮 Anomali Gemini Chatbot")
+     else:
+        st.caption("🐮 Anomali GPT Chatbot")
 
-    #Additional model parameter settings
-    temperature = st.slider(
-        "Temperature:",
-        min_value=0.01,
-        max_value=5.00,
-        value=0.07,
-        step=0.01
-    )
-    st.caption("min = 0.01 || max = 5.00")
-
-    top_p = st.slider(
-        "Top P:",
-        min_value=0.01,
-        max_value=1.00,
-        value=0.95,
-        step=0.01
-    )
-    st.caption("min = 0.01 || max = 1.00")
-
-    top_k = st.slider(
-        "Top K:",
-        min_value=1,
-        max_value=50,
-        value=40,
-        step=1
-    )
-    st.caption("min = 1 || max = 50")
-
-    max_tokens = st.slider(
-        "Max sequence length:",
-        min_value=64,
-        max_value=4096,
-        value=256,
-        step=1
-    )
-    st.caption("min = 1 || max = 50")
-
-    if selected_model == "gemini-2.5-flash":
-        #Start initialize Gemini LLM
-        genai.configure(api_key=os.environ["GEMINI_API_KEY"])
-        model = genai.GenerativeModel(
-            model_name="gemini-2.5-flash",
-            generation_config={
-                "temperature":temperature,
-                "top_p":top_p,
-                "top_k":top_k,
-                "max_output_tokens":max_tokens,
-            }
-            )
-    else:
-        openai.api_key = os.environ["OPENAI_API_KEY"]
-        model_name = "gpt-3.5-turbo"
-
-
-#Session state section
+    #make an expand widget for model response settings
+     with st.expander("Advanced settings"):
+        temperature = st.slider("Temperature", 0.0, 1.0, 1.0)
+        top_p = st.slider("Top P",  0.0, 1.0, 1.0)
+        top_k = st.slider("Top K", 1, 100, 40)
+        max_tokens = st.slider("Max tokens",50,2000,500)
+    
+#Initialize session state
 if "msg" not in st.session_state:
-    st.session_state.msg = []
+        st.session_state.msg = []
 
+# load session statenya
 def load_state():
     for msg in st.session_state.msg:
-        with st.chat_message(msg["role"]):
-            st.write(msg["content"])
+         with st.chat_message(msg["role"]):
+              st.markdown(msg["content"])
 
+# Save session statenya, append list buat di load ketika rerun
 def save_state(role, sentences):
     if role == "user":
         st.session_state.msg.append({"role": "user", "content": sentences})
-    elif role == "assistant":
+    if role == "assistant":
         st.session_state.msg.append({"role": "assistant", "content": sentences})
-
-
-#LLM Section
-prompt = st.chat_input("Say Something")
+# Load the chat
 load_state()
 
+# Start prompting
+prompt = st.chat_input("Input pertanyaan anomali")
 if prompt:
     with st.chat_message("user"):
-        st.write(prompt)
+        st.markdown(prompt)
         save_state("user", prompt)
         
-        response = model.generate_content(prompt)
+        #Add live-like thinking UI
 
     with st.chat_message("assistant"):
-        st.write_stream(print_char(response))
-        save_state("assistant", response.text)
+        with st.spinner("Thinking..."):
 
+            #Call openrouter function
+            #Kasih riwaya full chat, bukan variabel prompt doang
+            response = openrouter(selected_model, st.session_state.msg, temperature, top_p, top_k, max_tokens)
 
+            #Output responnya
+            st.markdown(response)
+            save_state("assistant", response)
