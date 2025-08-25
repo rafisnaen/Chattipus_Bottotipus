@@ -1,6 +1,7 @@
 import streamlit as st
 import requests
 import os
+import time
 
 # Init openrouter API
 API_KEY = os.environ.get("OPENROUTER_API_KEY") or st.secrets.get("OPENROUTER_API_KEY")
@@ -30,6 +31,13 @@ def openrouter(model, messages, temperature, top_p, top_k, max_tokens):
         response.raise_for_status()
     else:
         return response.json()["choices"][0]["message"]["content"] 
+    
+# Make a live-like response dari teks yang dikembalikan oleh open router
+def live_like_response(response):
+    for i in response:
+        yield i
+        time.sleep(0.010)
+
 
 st.set_page_config(
     page_title="Anomali baru",
@@ -107,6 +115,8 @@ if prompt:
             response = openrouter(selected_model, st.session_state.msg, temperature, top_p, top_k, max_tokens)
 
             #Output responnya
-            st.markdown(response)
+            #Berbeda dengan write,
+            #Write stream harus menampilkan respon yang tidak secara langsung dibuat utuh.
+            st.write_stream(live_like_response(response))
             # save role sama responnya
             save_state("assistant", response)
