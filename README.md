@@ -1,7 +1,7 @@
 # 🐮 Chattipus Bottotipus
 ### Streamlit Chatbot 🤖
 
-Basic chatbot by using openrouter API for LLMs gateway.
+Basic chatbot with parameters settings by using openrouter API for LLMs gateway.
 
 ---
 🐄 Chatbot access 🐄
