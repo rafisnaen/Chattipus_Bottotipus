@@ -192,7 +192,7 @@ with st.sidebar:
     )
 
     # caption
-    if selected_model == "deepseek/deepseek-chat-v3.1:free":
+    if selected_model == "deepseek/deepseek-chat-v3.1":
         st.caption("🐮 Anomali Deepseek Chatbot")
     else:
         st.caption("🐮 Anomali GPT Chatbot")
